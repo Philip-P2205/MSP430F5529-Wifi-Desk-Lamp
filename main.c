@@ -8,5 +8,5 @@ int main(void)
 {
 	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
 	// Test^8
-	return 0;
+	return 1;
 }
