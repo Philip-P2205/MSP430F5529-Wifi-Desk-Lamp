@@ -1,12 +1,16 @@
-#include <msp430.h> 
-
+#include "main.h"
 
 /**
  * main.c
  */
-int main(void)
+int main()
 {
-	WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
-	// Test^8
-	return 0;
+    WDTCTL = WDTPW | WDTHOLD;	// stop watchdog timer
+
+    P2DIR |= BIT2;
+    P2SEL |= BIT2;
+
+    while (1)
+        ;
+    return 0;
 }
