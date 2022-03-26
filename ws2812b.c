@@ -6,18 +6,19 @@
  */
 #include "ws2812b.h"
 
+/**
+ * The led strip model.
+ * This array will save all of the color data of the leds strip.
+ */
 static ws2812b_led_t leds[WS2812B_LED_COUNT] = { { 0, 0, 0 } };
 
-// static function not to be exposed to the user
+// static functions not to be exposed to the user:
 
-static uint32_t ws2812b_encode_byte_3bit(uint8_t byte);
 static uint64_t ws2812b_encode_byte_6bit(uint8_t byte);
-static void ws2812b_encode_led_3bit(const ws2812b_led_t *led, uint32_t output[],
-                                    uint16_t index);
+
 static void ws2812b_encode_led_6bit(const ws2812b_led_t *led, uint64_t output[],
                                     uint16_t index);
 static void ws2812b_transmitLED(const ws2812b_led_t *led);
-static void ws2812b_transmitColor_3bit(uint32_t color);
 static void ws2812b_transmitColor_6bit(uint64_t color);
 static inline void ws2812b_transmitByte(uint8_t byte);
 static inline void ws2812b_waitForBuffer(void);
@@ -235,15 +236,6 @@ static uint64_t ws2812b_encode_byte_6bit(uint8_t byte)
     return encodedData;
 }
 
-static void ws2812b_encode_led_3bit(const ws2812b_led_t *led, uint32_t output[],
-                                    uint16_t index)
-{
-    // Encoding GRB
-    output[index + 0] = ws2812b_encode_byte_3bit(led->green);
-    output[index + 1] = ws2812b_encode_byte_3bit(led->red);
-    output[index + 2] = ws2812b_encode_byte_3bit(led->blue);
-}
-
 static void ws2812b_encode_led_6bit(const ws2812b_led_t *led, uint64_t output[],
                                     uint16_t index)
 {
@@ -292,27 +284,6 @@ static void ws2812b_transmitLED(const ws2812b_led_t *led)
 //    USCI_B_SPI_transmitData(USCI_B0_BASE, 0xDB);
 //    USCI_B_SPI_transmitData(USCI_B0_BASE, 0x6D);
 //    USCI_B_SPI_transmitData(USCI_B0_BASE, 0xB6);
-}
-
-static void ws2812b_transmitColor_3bit(uint32_t color)
-{
-    uint8_t *bytes = (uint8_t*) &color;
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 2);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 1);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 0);
-
 }
 
 static void ws2812b_transmitColor_6bit(uint64_t color)
