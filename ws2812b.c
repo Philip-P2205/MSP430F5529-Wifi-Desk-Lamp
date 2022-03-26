@@ -14,14 +14,28 @@ static ws2812b_led_t leds[WS2812B_LED_COUNT] = { { 0, 0, 0 } };
 
 // static functions not to be exposed to the user:
 
+/**
+ * This function encodes the given byte using 6 bit encoding.
+ *
+ * @param byte The byte to encode
+ *
+ * @return The byte encoded using 6 bit encoding. Only the first 48-bits are used.
+ */
 static uint64_t ws2812b_encode_byte_6bit(uint8_t byte);
 
-static void ws2812b_encode_led_6bit(const ws2812b_led_t *led, uint64_t output[],
-                                    uint16_t index);
-static void ws2812b_transmitLED(const ws2812b_led_t *led);
-static void ws2812b_transmitColor_6bit(uint64_t color);
+/**
+ * This function transmits one byte using the USCI_B0_SPI module.
+ *
+ * @param byte The byte to transmit via SPI
+ */
 static inline void ws2812b_transmitByte(uint8_t byte);
-static inline void ws2812b_waitForBuffer(void);
+
+/**
+ * This function increases the vcore to the specified level.
+ * Note that is is recommended to increase the vcore one step at a time.
+ *
+ * @param level The level the vcore should be set to
+ */
 static static void ws2812b_set_vcore(unsigned int level);
 
 void ws2812b_init()
@@ -190,26 +204,6 @@ void ws2812b_initClockTo25MHz(void)
 #endif
 }
 
-/**
- * This function encodes an 8-bit color value into a 24-bit stream for the leds.
- */
-static uint32_t ws2812b_encode_byte_3bit(uint8_t byte)
-{
-    uint32_t encodedData = WS2812B_MASK_3BIT;
-
-    // MSB to LSB:
-    encodedData |= ((uint32_t) (byte & 0x80)) << 0x0F; // BIT7
-    encodedData |= ((uint32_t) (byte & 0x40)) << 0x0D; // BIT6
-    encodedData |= ((uint32_t) (byte & 0x20)) << 0x0B; // BIT5
-    encodedData |= ((uint32_t) (byte & 0x10)) << 0x09; // BIT4
-    encodedData |= ((uint32_t) (byte & 0x08)) << 0x07; // BIT3
-    encodedData |= ((uint32_t) (byte & 0x04)) << 0x05; // BIT2
-    encodedData |= ((uint32_t) (byte & 0x02)) << 0x03; // BIT1
-    encodedData |= ((uint32_t) (byte & 0x01)) << 0x01; // BIT0
-
-    return encodedData;
-}
-
 static uint64_t ws2812b_encode_byte_6bit(uint8_t byte)
 {
     uint64_t encodedData = WS2812B_MASK_6BIT; // 48bits required!
@@ -236,91 +230,6 @@ static uint64_t ws2812b_encode_byte_6bit(uint8_t byte)
     return encodedData;
 }
 
-static void ws2812b_encode_led_6bit(const ws2812b_led_t *led, uint64_t output[],
-                                    uint16_t index)
-{
-    // Encoding GRB
-    output[index + 0] = ws2812b_encode_byte_6bit(led->green);
-    output[index + 1] = ws2812b_encode_byte_6bit(led->red);
-    output[index + 2] = ws2812b_encode_byte_6bit(led->blue);
-}
-
-static void ws2812b_transmitLED(const ws2812b_led_t *led)
-{
-    uint64_t colors[] = { //
-            ws2812b_encode_byte_6bit(led->green), //
-            ws2812b_encode_byte_6bit(led->red), //
-            ws2812b_encode_byte_6bit(led->blue), //
-            };
-    uint8_t *green = (uint8_t*) &(colors[0]);
-    uint8_t *red = (uint8_t*) &(colors[1]);
-    uint8_t *blue = (uint8_t*) &(colors[2]);
-
-    // green
-    ws2812b_transmitByte(*(green + 5));
-    ws2812b_transmitByte(*(green + 4));
-    ws2812b_transmitByte(*(green + 3));
-    ws2812b_transmitByte(*(green + 2));
-    ws2812b_transmitByte(*(green + 1));
-    ws2812b_transmitByte(*(green + 0));
-
-    // red
-    ws2812b_transmitByte(*(red + 5));
-    ws2812b_transmitByte(*(red + 4));
-    ws2812b_transmitByte(*(red + 3));
-    ws2812b_transmitByte(*(red + 2));
-    ws2812b_transmitByte(*(red + 1));
-    ws2812b_transmitByte(*(red + 0));
-
-    // blue
-    ws2812b_transmitByte(*(blue + 5));
-    ws2812b_transmitByte(*(blue + 4));
-    ws2812b_transmitByte(*(blue + 3));
-    ws2812b_transmitByte(*(blue + 2));
-    ws2812b_transmitByte(*(blue + 1));
-    ws2812b_transmitByte(*(blue + 0));
-
-//    // alpha
-//    USCI_B_SPI_transmitData(USCI_B0_BASE, 0xDB);
-//    USCI_B_SPI_transmitData(USCI_B0_BASE, 0x6D);
-//    USCI_B_SPI_transmitData(USCI_B0_BASE, 0xB6);
-}
-
-static void ws2812b_transmitColor_6bit(uint64_t color)
-{
-    uint8_t *bytes = (uint8_t*) &color;
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 5);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 4);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 3);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 2);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 1);
-
-    while (!(UCB0IFG & UCTXIFG))
-        ;
-    //Transmit Data to slave
-    UCB0TXBUF = *(bytes + 0);
-}
-
 static inline void ws2812b_transmitByte(uint8_t byte)
 {
     //USCI_B0 TX buffer ready?
@@ -328,13 +237,6 @@ static inline void ws2812b_transmitByte(uint8_t byte)
         ;
     //Transmit Data to slave
     UCB0TXBUF = byte;
-}
-
-static inline void ws2812b_waitForBuffer(void)
-{
-    //USCI_A0 TX buffer ready?
-    while (!(UCB0IFG & UCTXIFG))
-        ;
 }
 
 static void ws2812b_set_vcore(unsigned int level)
