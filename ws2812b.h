@@ -11,31 +11,75 @@
 #include <msp430.h>
 #include <stdint.h>
 
-// Configuration - SET THESE!
-#define OUTPUT_PIN  (0x01)  // Set to whatever UCB0SIMO is on your processor (Px.1 here)
-#define NUM_LEDS    (10)    // NUMBER OF LEDS IN YOUR STRIP
+// Change this to the number of LEDs your strip has
+#define WS2812B_LED_COUNT 10
 
-// Useful typedefs
-typedef unsigned char u_char;   // 8 bit
-typedef unsigned int u_int;     // 16 bit
+// DO NOT TOUCH THESE OR THE CODE WILL BREAK!
+#define WS2812B_MASK_3BIT 0x924924
+#define WS2812B_MASK_6BIT 0x0000C30C30C30C30
 
-// Transmit codes
-#define HIGH_CODE   (0xF0)      // b11110000
-#define LOW_CODE    (0xC0)      // b11000000
+#define WS2812B_CLOCK_25MHz
 
-// Configure processor to output to data strip
-void initStrip(void);
+/*
+ * This is the data holding container for a single led.
+ * A LED-strip is modeled by using an array of this container
+ */
+typedef struct
+{
+    uint8_t red;
+    uint8_t green;
+    uint8_t blue;
+} ws2812b_led_t;
 
-// Send colors to the strip and show them. Disables interrupts while processing.
-void showStrip(void);
+/**
+ * This function initializes the USCI_B0_SPI module, initializes all the LEDs to be black and displays them.
+ */
+extern void ws2812b_init(void);
 
-// Set the color of a certain LED
-void setLEDColor(u_int p, u_char r, u_char g, u_char b);
+/**
+ * This function initializes the USCI_B0_SPI module. For the code to work, the MSP needs to run at 25MHz.
+ */
+extern void ws2812b_initSPI(void);
 
-// Clear the color of all LEDs (make them black/off)
-inline void clearStrip(void);
+/**
+ * This function sets the color of a single led at index 'p'.
+ *
+ * @param p The index of the led
+ * @param r The red value of the color
+ * @param g The green value of the color
+ * @param b The blue value of the color
+ */
+extern void ws2812b_setLEDColor(uint16_t p, uint8_t r, uint8_t g, uint8_t b);
 
-// Fill the strip with a solid color. This will update the strip.
-void fillStrip(u_char r, u_char g, u_char b);
+/**
+ * This function displays the current led strip.
+ * Beware that during execution of this function interrupts will be disabled.
+ */
+extern void ws2812b_showStrip(void);
 
+/**
+ * This function fills the led strip with black color values
+ */
+extern void ws2812b_clearStrip(void);
+
+/**
+ * This function fills the entire led strip with a single color with the color values r, g and b
+ *
+ * @param r The red value of the color
+ * @param g The green value of the color
+ * @param b The blue value of the color
+ */
+extern void ws2812b_fillStrip(uint8_t r, uint8_t g, uint8_t b);
+
+/**
+ * This function fills the entire strip with a single color 'color'
+ *
+ * @param color The color value
+ */
+extern void ws2812b_fillStripColor(ws2812b_led_t *color);
+
+/**
+ * This function initializes the MSP MCLK and SMCLK to 25MHz.
+ */
+extern void ws2812b_initClockTo25MHz(void);
 #endif /* WS2812B_H_ */

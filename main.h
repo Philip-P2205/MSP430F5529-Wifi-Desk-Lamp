@@ -1,17 +1,20 @@
 /*
  * main.h
  *
- *  Created on: 25.03.2022
- *      Author: Philip Prohaska
+ *  Created on: 20.11.2021
+ *      Author: Stefan Fraydl / Simon Oberbarleitner
  */
 
-#ifndef MAIN_H_
-#define MAIN_H_
 
-#include <msp430.h>
+//******************************************************************************
+//includes for MSP430F5529 *****************************************************
+
 #include <stdint.h>
-//#include "ws2812b.h"
+#include "msp430f5529.h"
+#include "intrinsics.h"
 
-void
 
-#endif /* MAIN_H_ */
+//******************************************************************************
+//port and pin definitions for MSP430F5529 *************************************
+
+extern void delayfunction(uint16_t);
