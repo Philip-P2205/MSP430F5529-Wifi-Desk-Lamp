@@ -1,25 +1,37 @@
 /*
- * ws2812b.h
+ * Copyright 2022 Philip Prohaska and Jonathan Margreiter
  *
- *  Created on: 25.10.2021
- *      Author: Philip Prohaska
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at*
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *See the License for the specific language governing permissions and
+ *limitations under the License.
  */
 
 #ifndef WS2812B_H_
 #define WS2812B_H_
 
-#include <stdint.h>
 #include <msp430.h>
+#include <stdint.h>
 
+// Change this to the number of LEDs your strip has
 #define WS2812B_LED_COUNT 10
 
-// DO NOT TOUCH !
-#define WS2812B_MASK_3BIT 0x924924
-#define WS2812B_MAX_SEND_BUFFER_SIZE 1 /*(WS2812B_LED_COUNT * 9)*/
-#define SMCLK_kHz 8192
-#define SMCLK_RATIO 256
-#define SPICLK 2300000
+// DO NOT TOUCH THESE OR THE CODE WILL BREAK!
+#define WS2812B_MASK_6BIT 0x0000C30C30C30C30
 
+#define WS2812B_CLOCK_25MHz
+
+/*
+ * This is the data holding container for a single led.
+ * A LED-strip is modeled by using an array of this container
+ */
 typedef struct
 {
     uint8_t red;
@@ -28,121 +40,54 @@ typedef struct
 } ws2812b_led_t;
 
 /**
- * This function initializes everything needed for the library to work.
+ * This function initializes the USCI_B0_SPI module, initializes all the LEDs to be black and displays them.
  */
 extern void ws2812b_init(void);
-/**
- * This function initializes USCI_B_SPI. This module is used for transmitting the data to the leds.
- *
- * The pinout for USCI_B_SPI is the following:
- *  - MOSI: P3.0
- *  - MISO: P3.1
- *  - CLK:   P3.2
- *
- * However for this library only the MOSI pin is needed.
- */
-extern bool ws2812b_init_spi(void);
 
 /**
- * This function encodes an 8-bit (1 byte) value into 32 bits that can be sent to the leds.
- *
- * @param byte The data that should be encoded.
+ * This function initializes the USCI_B0_SPI module. For the code to work, the MSP needs to run at 25MHz.
  */
-extern uint32_t ws2812b_encode_byte_3bit(uint8_t byte);
-/**
- * This function encodes a LEDs red, green and blue values into a 32-bit encoded value that is saved in output.
- *
- * @param led A pointer to the led that should be encoded.
- * @param output The output field for the encoded color values. Must have at least 3 free spots.
- * @param index The staring index for the output values. Including output[index] there must be at least 3 spaces available.
- */
-extern void ws2812b_encode_led_3bit(const ws2812b_led_t *led, uint32_t output[],
-                                    uint16_t index);
-
-
-extern void ws2812b_waitForBuffer(void);
+extern void ws2812b_initSPI(void);
 
 /**
- * This function transmits a single leds color values.
+ * This function sets the color of a single led at index 'p'.
  *
- * @param led A pointer to the LED to transmit the color values from.
+ * @param p The index of the led
+ * @param r The red value of the color
+ * @param g The green value of the color
+ * @param b The blue value of the color
  */
-extern void ws2812b_transmitLED(const ws2812b_led_t *led);
+extern void ws2812b_setLEDColor(uint16_t p, uint8_t r, uint8_t g, uint8_t b);
 
 /**
- * This function transmits a single 32-bit encoded color value.
- *
- * @param color The 32-bit encoded color value to transmit.
- *
+ * This function displays the current led strip.
+ * Beware that during execution of this function interrupts will be disabled.
  */
-extern void ws2812b_transmitColor(uint32_t color);
+extern void ws2812b_showStrip(void);
 
 /**
- * This function transmits a single byte.
- *
- * @param data The data to transmit.
+ * This function fills the led strip with black color values
  */
-extern void ws2812b_transmitByte(uint8_t byte);
+extern void ws2812b_clearStrip(void);
 
+/**
+ * This function fills the entire led strip with a single color with the color values r, g and b
+ *
+ * @param r The red value of the color
+ * @param g The green value of the color
+ * @param b The blue value of the color
+ */
+extern void ws2812b_fillStrip(uint8_t r, uint8_t g, uint8_t b);
+
+/**
+ * This function fills the entire strip with a single color 'color'
+ *
+ * @param color The color value
+ */
+extern void ws2812b_fillStripColor(ws2812b_led_t *color);
+
+/**
+ * This function initializes the MSP MCLK and SMCLK to 25MHz.
+ */
+extern void ws2812b_initClockTo25MHz(void);
 #endif /* WS2812B_H_ */
-/*
- * Data Signal:
- *  - GRBA-Encoding
- *  - MSB-First
- *  - Bit time ~0.4us
- *  - Frequency: 2,5MHz
- */
-
-/*
- ******************
- * 3-bit encoding *
- ******************
- *
- * 8 bits from LED color stream encoded in 3 byte for transport stream (SPI TX)
- * or: 1 bit from LED color stream encoded in 3 bit for transport stream
- *
- *                      _
- * ZERO: 100     |__
- *                    __
- * ONE :  110      |_
- *
- * the bit in the middle defines the value
- *
- * data stream: 0x23                 0  0  1  0  0  0  1  1
- * encoding:                        1x01x01x01x01x01x01x01x0
- * transport stream:                100100110100100100110110
- *
- * initial mask: 0x92 0x49 0x24     100100100100100100100100
- *
- * sourcebit :                       7  6  5  4  3  2  1  0
- * encoding  :                      1x01x01x01x01x01x01x01x0
- * targetbit :                       6  3  0  5  2  7  4  1
- * targetbyte:                      |   0   |   1   |   2   |
- *
- * sourcebit -> (targetbit,targetbyte)
- * 7->(6,0)
- * 6->(3,0)
- * 5->(0,0)
- * 4->(5,1)
- * 3->(2,1)
- * 2->(7,2)
- * 1->(4,2)
- * 0->(1,2)
- */
-
-/*
- ******************
- * 4-bit encoding *
- ******************
- *
- * 2 bits from LED color stream encoded in 1 byte for transport stream (SPI TX)
- * or: 1 bit from LED color stream encoded in 4 bit for transport stream
- *
- *                      _
- * ZERO: 1000 = 0x8      |___
- *                      ___
- * ONE : 1110 = 0xE        |_
- *
- * SPI Clock around 3.2MHz (e.g. 6.7MHz/2 = 3.35MHz)
- *
- */
