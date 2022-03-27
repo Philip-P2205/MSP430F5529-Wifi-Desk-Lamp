@@ -62,7 +62,6 @@ extern void ws2812b_setLEDColor(uint16_t p, uint8_t r, uint8_t g, uint8_t b);
 /**
  * This function displays the current led strip.
  * Beware that during execution of this function interrupts will be disabled.
- * This is necessary so the data can be sent in one go without any interruptions
  */
 extern void ws2812b_showStrip(void);
 
