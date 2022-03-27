@@ -22,15 +22,15 @@ static uint8_t data[0xFF];
 static mesp_callback_fct_t callback_fct;
 
 static uint8_t receive_index = 0;
-static uint8_t receive_status = 0;
+static uint8_t mesp_status = 0;
 
 void mesp_loop(void)
 {
-    if (receive_status == MESP_STATUS_FINISHED)
+    if (mesp_status == MESP_STATUS_FINISHED)
     {
         callback_fct(&frame);
         receive_index = 0;
-        receive_status = MESP_STATUS_START;
+        mesp_status = MESP_STATUS_START;
     }
 }
 
@@ -39,7 +39,7 @@ void mesp_init(mesp_callback_fct_t callback)
     callback_fct = callback; // Save callback function for later use
     frame.data = data;
     mesp_initSPI(); // init USCI_A0_SPI module
-    receive_status = MESP_STATUS_START;
+    mesp_status = MESP_STATUS_START;
 }
 
 void mesp_initSPI(void)
@@ -51,8 +51,6 @@ void mesp_initSPI(void)
     UCA0CTL0 |= UCSYNC + UCMSB; // 3-pin, 8-bit, MSB-first
     UCA0CTL1 &= ~UCSWRST;
     UCA0IE |= UCRXIE;
-
-    __bis_SR_register(GIE); // enable interrupts
 }
 
 inline void mesp_disableIncoming(void)
@@ -74,26 +72,26 @@ __interrupt void USCI_A0_ISR(void)
         break;
     case 2: // Vector 2 - RXIFG
         // check if all the data has been received
-        if (receive_status == MESP_STATUS_DATA && receive_index >= frame.length)
-            receive_status = MESP_STATUS_END; // Change the status to receive end code
+        if (mesp_status == MESP_STATUS_DATA && receive_index >= frame.length)
+            mesp_status = MESP_STATUS_END; // Change the status to receive end code
 
-        switch (receive_status)
+        switch (mesp_status)
         {
         case MESP_STATUS_START:
             // Has the start code been sent?
             if (UCA0RXBUF == MESP_START_CODE)
-                receive_status = MESP_STATUS_CMD; // Change the status to receive command
+                mesp_status = MESP_STATUS_CMD; // Change the status to receive command
             break;
 
         case MESP_STATUS_CMD:
             frame.cmd = UCA0RXBUF;       // save the command
-            receive_status = MESP_STATUS_LENGTH; // Change the status to receive data length
+            mesp_status = MESP_STATUS_LENGTH; // Change the status to receive data length
             break;
 
         case MESP_STATUS_LENGTH:
             frame.length = UCA0RXBUF;  // save the data length
             receive_index = 0;                 // initialize the receive index
-            receive_status = MESP_STATUS_DATA; // Change the status to receive data
+            mesp_status = MESP_STATUS_DATA; // Change the status to receive data
             break;
 
         case MESP_STATUS_DATA:
@@ -106,7 +104,7 @@ __interrupt void USCI_A0_ISR(void)
             // Has the end code been sent?
             if (UCA0RXBUF == MESP_END_CODE)
             {
-                receive_status = MESP_STATUS_FINISHED; // Change the status to finished
+                mesp_status = MESP_STATUS_FINISHED; // Change the status to finished
 
             }
             break;
