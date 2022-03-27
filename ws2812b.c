@@ -20,7 +20,7 @@
  * The led strip model.
  * This array will save all of the color data of the leds strip.
  */
-static ws2812b_led_t leds[WS2812B_LED_COUNT] = {{0, 0, 0}};
+static ws2812b_led_t leds[WS2812B_LED_COUNT] = { { 0, 0, 0 } };
 
 // static functions not to be exposed to the user:
 
@@ -60,25 +60,28 @@ void ws2812b_initSPI()
 {
     UCB0CTL1 |= UCSWRST; // Put USCI state machin in reset
 
-    P3SEL |= BIT0;                               // configure output pin as SPI output
-                                                 //    P3SEL2 |= OUTPUT_PIN;
+    P3SEL |= BIT0;                         // configure output pin as SPI output
+                                           //    P3SEL2 |= OUTPUT_PIN;
     UCB0CTL0 |= UCCKPH + UCMSB + UCMST + UCSYNC; // 3-pin, MSB, 8-bit SPI master
     UCB0CTL1 |= UCSSEL_2;                        // SMCLK source (16 MHz)
-    UCB0BR0 = 5;                                 // 25 MHz / 5 = .2 us per bit (.1875 us per bit)
+    UCB0BR0 = 5;                // 25 MHz / 5 = .2 us per bit (.1875 us per bit)
     UCB0BR1 = 0;
     UCB0CTL1 &= ~UCSWRST; // Initialize USCI state machine
 }
 
 void ws2812b_setLEDColor(uint16_t p, uint8_t r, uint8_t g, uint8_t b)
 {
-    leds[p].green = g;
-    leds[p].red = r;
-    leds[p].blue = b;
+    if (p < WS2812B_LED_COUNT) // protection against memory overflow
+    {
+        leds[p].green = g;
+        leds[p].red = r;
+        leds[p].blue = b;
+    }
 }
 
 void ws2812b_showStrip(void)
 {
-    uint64_t colors[3][WS2812B_LED_COUNT] = {{0}}; // Array for all the encoded led data
+    uint64_t colors[3][WS2812B_LED_COUNT] = { { 0 } }; // Array for all the encoded led data
 
     uint64_t *green = colors[0];
     uint64_t *red = colors[1];
@@ -96,9 +99,9 @@ void ws2812b_showStrip(void)
 
     for (i = 0; i < WS2812B_LED_COUNT; i++)
     {
-        g = (uint8_t *)&green[i]; // get the 8 bit chunks for green
-        r = (uint8_t *)&red[i];   // get the 8 bit chunks for red
-        b = (uint8_t *)&blue[i];  // get the 8 bit chunks for blue
+        g = (uint8_t*) &green[i]; // get the 8 bit chunks for green
+        r = (uint8_t*) &red[i];   // get the 8 bit chunks for red
+        b = (uint8_t*) &blue[i];  // get the 8 bit chunks for blue
         /*
          * Color encoding (saved in 64-bit variable, upper 2 bytes not used):
          * Encoded color: 11aa0011 bb0011cc 0011dd00 11ee0011 ff0011gg 0011hh00
@@ -154,18 +157,19 @@ void ws2812b_initClockTo25MHz(void)
 
     P5SEL |= BIT4 + BIT5;          // port select XT1
     UCSCTL6 &= ~(XT1OFF + XCAP_3); // XT1 On, clear internal load caps
-    UCSCTL6 |= XCAP_0;             // internal load caps 2pF, 6pF, 9pF or 12pF could be selected, XCAP_0 => 2pF
+    UCSCTL6 |= XCAP_0; // internal load caps 2pF, 6pF, 9pF or 12pF could be selected, XCAP_0 => 2pF
 
     do // loop until XT1 fault flag is cleared
     {
         UCSCTL7 &= ~XT1LFOFFG;     // clear XT1 fault flags
-    } while (UCSCTL7 & XT1LFOFFG); // test XT1 fault flag
+    }
+    while (UCSCTL7 & XT1LFOFFG); // test XT1 fault flag
 
     UCSCTL6 &= ~(XT1DRIVE_3); // reduce XT1driver strength to the lowest level
 
     __bis_SR_register(SCG0); // disable the FLL control loop
 
-#ifdef CLOCK_25MHz
+#ifdef WS2812B_CLOCK_25MHz
     ws2812b_set_vcore(0x01); // Increase Vcore setting to level 3...
     ws2812b_set_vcore(0x02); // ...to support fsystem=25MHz
     ws2812b_set_vcore(0x03); // NOTE: Change core voltage one level at a time
@@ -175,7 +179,7 @@ void ws2812b_initClockTo25MHz(void)
     UCSCTL2 = FLLD_0 + 762; // 32768Hz * (762 + 1) = 25MHz
 #endif
 
-#ifdef CLOCK_16MHz
+#ifdef WS2812B_CLOCK_16MHz
     ws2812b_set_vcore(0x01); // Increase Vcore setting to level 3...
     ws2812b_set_vcore(0x02); // ...to support fsystem=16MHz
     ws2812b_set_vcore(0x03); // NOTE: Change core voltage one level at a time
@@ -185,13 +189,13 @@ void ws2812b_initClockTo25MHz(void)
     UCSCTL2 = FLLD_0 + 487; // 32768Hz * (487 + 1) = 16MHz
 #endif
 
-#ifdef CLOCK_8MHz
+#ifdef WS2812B_CLOCK_8MHz
     UCSCTL1 = DCORSEL_3;    // select DCO range 1MHz to 10MHz
     UCSCTL2 = FLLD_1 + 243; // 32768Hz * (243 + 1) = 8MHz
 #endif
 
-    UCSCTL3 = SELREF_0 + FLLREFDIV_0;             // Set DCO FLL reference = XT1, FLL reference divider 1
-    UCSCTL4 = SELA_0 + SELS_3 + SELM_3;           // select clock sources for ACLK, MCLK and SMCLK
+    UCSCTL3 = SELREF_0 + FLLREFDIV_0; // Set DCO FLL reference = XT1, FLL reference divider 1
+    UCSCTL4 = SELA_0 + SELS_3 + SELM_3; // select clock sources for ACLK, MCLK and SMCLK
     UCSCTL5 = DIVPA_0 + DIVA_0 + DIVS_0 + DIVM_0; // select clock dividers
 
     __bic_SR_register(SCG0); // enable the FLL control loop
@@ -200,15 +204,15 @@ void ws2812b_initClockTo25MHz(void)
     // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
     // UG for optimization.
 
-#ifdef CLOCK_8MHz
+#ifdef WS2812B_CLOCK_8MHz
     __delay_cycles(250000); // 32 x 32 x 8 MHz / 32768 Hz = 250000 = MCLK cycles for DCO to settle
 #endif
 
-#ifdef CLOCK_16MHz
+#ifdef WS2812B_CLOCK_16MHz
     __delay_cycles(500000); // 32 x 32 x 16 MHz / 32,768 Hz = 500000 = MCLK cycles for DCO to settle
 #endif
 
-#ifdef CLOCK_25MHz
+#ifdef WS2812B_CLOCK_25MHz
     __delay_cycles(782000); // 32 x 32 x 25 MHz / 32768 Hz = 782000 = MCLK cycles for DCO to settle
 #endif
 }
@@ -219,22 +223,22 @@ static uint64_t ws2812b_encode_byte_6bit(uint8_t byte)
 
     // encoding: abcdefgh --> 11aa00 11bb00 11cc00 11dd00 11ee00 11ff00 11gg00 11hh00
 
-    encodedData |= ((uint64_t)(byte & 0x80)) << 0x25; // BIT7-1
-    encodedData |= ((uint64_t)(byte & 0x80)) << 0x26; // BIT7-2
-    encodedData |= ((uint64_t)(byte & 0x40)) << 0x20; // BIT6-1
-    encodedData |= ((uint64_t)(byte & 0x40)) << 0x21; // BIT6-2
-    encodedData |= ((uint64_t)(byte & 0x20)) << 0x1B; // BIT5-1
-    encodedData |= ((uint64_t)(byte & 0x20)) << 0x1C; // BIT5-2
-    encodedData |= ((uint64_t)(byte & 0x10)) << 0x16; // BIT4-1
-    encodedData |= ((uint64_t)(byte & 0x10)) << 0x17; // BIT4-2
-    encodedData |= ((uint64_t)(byte & 0x08)) << 0x11; // BIT3-1
-    encodedData |= ((uint64_t)(byte & 0x08)) << 0x12; // BIT3-2
-    encodedData |= ((uint64_t)(byte & 0x04)) << 0x0C; // BIT2-1
-    encodedData |= ((uint64_t)(byte & 0x04)) << 0x0D; // BIT2-2
-    encodedData |= ((uint64_t)(byte & 0x02)) << 0x07; // BIT1-1
-    encodedData |= ((uint64_t)(byte & 0x02)) << 0x08; // BIT1-2
-    encodedData |= ((uint64_t)(byte & 0x01)) << 0x02; // BIT0-1
-    encodedData |= ((uint64_t)(byte & 0x01)) << 0x03; // BIT0-2
+    encodedData |= ((uint64_t) (byte & 0x80)) << 0x25; // BIT7-1
+    encodedData |= ((uint64_t) (byte & 0x80)) << 0x26; // BIT7-2
+    encodedData |= ((uint64_t) (byte & 0x40)) << 0x20; // BIT6-1
+    encodedData |= ((uint64_t) (byte & 0x40)) << 0x21; // BIT6-2
+    encodedData |= ((uint64_t) (byte & 0x20)) << 0x1B; // BIT5-1
+    encodedData |= ((uint64_t) (byte & 0x20)) << 0x1C; // BIT5-2
+    encodedData |= ((uint64_t) (byte & 0x10)) << 0x16; // BIT4-1
+    encodedData |= ((uint64_t) (byte & 0x10)) << 0x17; // BIT4-2
+    encodedData |= ((uint64_t) (byte & 0x08)) << 0x11; // BIT3-1
+    encodedData |= ((uint64_t) (byte & 0x08)) << 0x12; // BIT3-2
+    encodedData |= ((uint64_t) (byte & 0x04)) << 0x0C; // BIT2-1
+    encodedData |= ((uint64_t) (byte & 0x04)) << 0x0D; // BIT2-2
+    encodedData |= ((uint64_t) (byte & 0x02)) << 0x07; // BIT1-1
+    encodedData |= ((uint64_t) (byte & 0x02)) << 0x08; // BIT1-2
+    encodedData |= ((uint64_t) (byte & 0x01)) << 0x02; // BIT0-1
+    encodedData |= ((uint64_t) (byte & 0x01)) << 0x03; // BIT0-2
 
     return encodedData;
 }
@@ -253,7 +257,7 @@ static void ws2812b_set_vcore(unsigned int level)
     PMMCTL0_H = PMMPW_H; // Open PMM registers for write
 
     SVSMHCTL = SVSHE + SVSHRVL0 * level + SVMHE + SVSMHRRL0 * level; // Set SVS/SVM high side new level
-    SVSMLCTL = SVSLE + SVMLE + SVSMLRRL0 * level;                    // Set SVM low side to new level
+    SVSMLCTL = SVSLE + SVMLE + SVSMLRRL0 * level; // Set SVM low side to new level
 
     while ((PMMIFG & SVSMLDLYIFG) == 0)
         ; // Wait till SVM is settled
