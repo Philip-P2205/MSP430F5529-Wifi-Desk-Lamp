@@ -17,19 +17,16 @@
 #include <msp430.h>
 #include <stdint.h>
 #include <stdbool.h>
-//#include "ws2812b.h"
-#include "mesp.h"
+#include "mesp-ws2812b.h"
 
 //ws2812b_led_t color = { 0, 0, 0 };
 
-void callback_function(mesp_data_frame_t *frame)
-{
-    __no_operation();
-}
 /*
  * TODO: write function to handle the incoming data.
  * mesp module is finished
  */
+
+mespWS2812B_color_t color = { .r = 255, .g = 0, .g = 0 };
 int main()
 {
     WDTCTL = WDTPW | WDTHOLD; // stop watchdog timer
@@ -43,12 +40,12 @@ int main()
 //  ws2812b_init(); // Initialize USCI_B0_SPI module and clear the leds to be black.
 //                  //    __delay_cycles(25000000); // 1 second delay at 25MHz
 
-    mesp_init(&callback_function);
-
+    mespWS2812B_init();
+//    mespWS2812B_single(&color);
+    mespWS2812B_enable();
     while (1)
     {
-        mesp_loop();
-//    ws2812b_showStrip();            // display the color in the strip
+        mespWS2812B_loop();
     }
     return 0;
 }
