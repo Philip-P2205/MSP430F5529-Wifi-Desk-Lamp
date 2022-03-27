@@ -1,20 +1,15 @@
 /*
- * main.h
+ * Copyright 2022 Philip Prohaska and Jonathan Margreiter
  *
- *  Created on: 20.11.2021
- *      Author: Stefan Fraydl / Simon Oberbarleitner
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *See the License for the specific language governing permissions and
+ *limitations under the License.
  */
-
-
-//******************************************************************************
-//includes for MSP430F5529 *****************************************************
-
-#include <stdint.h>
-#include "msp430f5529.h"
-#include "intrinsics.h"
-
-
-//******************************************************************************
-//port and pin definitions for MSP430F5529 *************************************
-
-extern void delayfunction(uint16_t);
