@@ -46,7 +46,7 @@ static inline void ws2812b_transmitByte(uint8_t byte);
  *
  * @param level The level the vcore should be set to
  */
-static static void ws2812b_set_vcore(unsigned int level);
+static void ws2812b_set_vcore(unsigned int level);
 
 void ws2812b_init()
 {
