@@ -87,7 +87,7 @@ void ws2812b_showStrip(void)
     uint64_t *red = colors[1];
     uint64_t *blue = colors[2];
 
-    uint8_t *g, *r, *b; // 8-bit color chunks to send with SPI.
+    uint8_t *g, *r, *b; // 8-bit color chunks to send with SPI 
 
     uint16_t i; // looping variable
     for (i = 0; i < WS2812B_LED_COUNT; i++)

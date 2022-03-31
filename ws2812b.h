@@ -20,7 +20,7 @@
 #include <msp430.h>
 #include <stdint.h>
 
-// Change this to the number of LEDs your strip has
+// Change this to the number of LEDs your strip has (Changes LED strip array size)
 #define WS2812B_LED_COUNT 10
 
 // DO NOT TOUCH THESE OR THE CODE WILL BREAK!
