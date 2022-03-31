@@ -4,23 +4,11 @@
 #include <SPI.h>
 
 // Replace with your network credentials
-const char* ssid = "PHILIP-LAPTOP";
-const char* password = "Kellys1234";
+const char *ssid = "PHILIP-LAPTOP";
+const char *password = "Kellys1234";
 
 const unsigned char TRANSFER_START = 0xaa;
 const unsigned char TRANSFER_END = 0x33;
-
-#define CMD_CLEAR 0x01
-#define CMD_SINGLE 0x02
-#define CMD_INDIVIDUAL 0x03
-#define CMD_RAINBOW 0x04
-#define CMD_PULSE 0x05
-#define CMD_RANDOM 0x06
-#define CMD_GRADIENT 0x07
-#define CMD_FIRE 0x08
-#define CMD_STARLIGHT 0x09
-#define CMD_SPECTRUM 0x0A
-
 
 // Set web server port number to 80
 WiFiServer server(80);
@@ -28,46 +16,28 @@ WiFiServer server(80);
 // Variable to store the HTTP request
 String header;
 
-//Variable to store the color for the LEDs
-String colorString;
-unsigned int color;
-
-// Auxiliar variables to store the current output state
-String output26State = "off";
-String output27State = "off";
-
-// Assign output variables to GPIO pins
-const int output26 = 26;
-const int output27 = 27;
-
 // Current time
 unsigned long currentTime = millis();
 // Previous time
-unsigned long previousTime = 0; 
+unsigned long previousTime = 0;
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
-
 void printWebsite(WiFiClient &client);
-void handleColorGetRequest(String &header);
+void handlePostRequest(String &header);
 void sendCmd(const char cmd, const unsigned int length, const char *data);
 
-
-void setup() {
+void setup()
+{
   Serial.begin(115200);
   SPI.begin();
-  // Initialize the output variables as outputs
-  pinMode(output26, OUTPUT);
-  pinMode(output27, OUTPUT);
-  // Set outputs to LOW
-  digitalWrite(output26, LOW);
-  digitalWrite(output27, LOW);
 
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  while (WiFi.status() != WL_CONNECTED)
+  {
     delay(500);
     Serial.print(".");
   }
@@ -79,45 +49,97 @@ void setup() {
   server.begin();
 }
 
-void loop(){
-  WiFiClient client = server.available();   // Listen for incoming clients
+void loop()
+{
+  WiFiClient client = server.available(); // Listen for incoming clients
 
-  if (client) {                             // If a new client connects,
+  if (client)
+  { // If a new client connects,
     currentTime = millis();
     previousTime = currentTime;
-    Serial.println("New Client.");          // print a message out in the serial port
-    String currentLine = "";                // make a String to hold incoming data from the client
-    while (client.connected() && currentTime - previousTime <= timeoutTime) {  // loop while the client's connected
+    Serial.println("New Client."); // print a message out in the serial port
+    String currentLine = "";       // make a String to hold incoming data from the client
+    while (client.connected() && currentTime - previousTime <= timeoutTime)
+    { // loop while the client's connected
       currentTime = millis();
-      if (client.available()) {             // if there's bytes to read from the client,
-        char c = client.read();             // read a byte, then
-        Serial.write(c);                    // print it out the serial monitor
+      if (client.available())
+      {                         // if there's bytes to read from the client,
+        char c = client.read(); // read a byte, then
+        Serial.write(c);        // print it out the serial monitor
         header += c;
-        if (c == '\n') {                    // if the byte is a newline character
+        if (c == '\n')
+        { // if the byte is a newline character
           // if the current line is blank, you got two newline characters in a row.
           // that's the end of the client HTTP request, so send a response:
-          if (currentLine.length() == 0) {
+          if (currentLine.length() == 0)
+          {
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println("Connection: Closed");
-            client.println();
+            Serial.println();
+            Serial.println("Header: ");
+            Serial.println(header);
 
-            if (header.indexOf("GET /?color=%23") >= 0)
-            handleColorGetRequest(header);
+            // Get Request always sends the website, no matter the url or payload
+            if (header.indexOf("GET") >= 0)
+            {
+              client.println("HTTP/1.1 200 OK");
+              client.println("Content-type:text/html");
+              client.println("Connection: Closed");
+              client.println();
 
-            printWebsite(client);
-            
+              printWebsite(client);
+            }
+            // POST /send-cmd?cmd=01&data=0FF000 HTTP/1.1
+            else if (header.indexOf("POST /send-cmd?") >= 0)
+            {
+              unsigned int index1 = header.indexOf("POST /send-cmd?") + 15;
+              unsigned int index2 = header.indexOf(" HTTP/1.1");
+              String url = header.substring(index1, index2); // extract the payload from the request
+
+              Serial.println();
+              Serial.print("Payload: ");
+              // Serial.println(url);
+
+              String cmd_str = url.substring(4, 6);
+              String data_str = url.substring(12, url.length());
+              Serial.print("cmd: ");
+              Serial.println(cmd_str);
+              Serial.print("data: ");
+              Serial.println(data_str);
+
+              // Command as an 8-bit number
+              unsigned char cmd = strtoul(("0x" + cmd_str).c_str(), NULL, 16); // convert hex into decimal
+              // Data stored in an array of 8-bit numbers
+              unsigned char data[255]; // create an array for storing the data with maximum size available. This is just because I'm lazy and don't want to allocate memory.
+              // Length of the Data sent as an 8-bit number
+              const unsigned char length = data_str.length() / 2;
+              for (size_t i = 0; i < length; i++)
+              {
+                Serial.println(data_str.substring(2 * i, 2 * (i + 1)));
+                data[i] = (unsigned char)strtoul(("0x" + data_str.substring(2 * i, 2 * (i + 1))).c_str(), NULL, 16);
+                Serial.println(data[i]);
+              }
+              sendCmd(cmd, length, data);
+            }
+            // Deny any other POST requests
+            else if (header.indexOf("POST /") >= 0)
+            {
+              client.println("HTTP/1.1 400 BAD REQUEST");
+              client.println("Connection: Closed");
+            }
             // The HTTP response ends with another blank line
             client.println();
             // Break out of the while loop
             break;
-          } else { // if you got a newline, then clear currentLine
+          }
+          else
+          { // if you got a newline, then clear currentLine
             currentLine = "";
           }
-        } else if (c != '\r') {  // if you got anything else but a carriage return character,
-          currentLine += c;      // add it to the end of the currentLine
+        }
+        else if (c != '\r')
+        {                   // if you got anything else but a carriage return character,
+          currentLine += c; // add it to the end of the currentLine
         }
       }
     }
@@ -129,40 +151,6 @@ void loop(){
     Serial.println("");
   }
 }
-
-void handleColorGetRequest(String &header)
-{
-  Serial.println(header); // Print header for debug reasons
-  int index = header.indexOf("GET /?color=%23");
-  colorString = "0x" + header.substring(index + 21, 15);
-  Serial.println("ColorString: " + colorString);
-  
-  char *p;
-  color = (unsigned int) strtoul(colorString.c_str(), &p, 16); // convert hex color into decimal (binary)
-  unsigned int r = (color >> 16) & 0xFF;
-  unsigned int g = (color >> 8) & 0xFF;
-  unsigned int b = (color >> 0) & 0xFF;
-  Serial.print("Color: ");
-  Serial.println(color);
-  Serial.print("RGB: ");
-  Serial.print(r);
-  Serial.print(", ");
-  Serial.print(g);
-  Serial.print(", ");
-  Serial.println(b);
-
-  unsigned char data[3] = {r, g, b};
-
-  /*for (int i = 0; i < 80; i++)
-  {
-    data[3*i]=r;
-    data[3*i+1]=g;
-    data[3*i+2]=b;
-  }*/
-
-  sendCmd(CMD_SINGLE, 3, data);
-}
-
 
 void sendCmd(const unsigned char cmd, const unsigned char length, const unsigned char *data)
 {
@@ -178,7 +166,6 @@ void sendCmd(const unsigned char cmd, const unsigned char length, const unsigned
   SPI.transfer(TRANSFER_END);
   SPI.endTransaction();
 }
-
 
 void printWebsite(WiFiClient &client)
 {
