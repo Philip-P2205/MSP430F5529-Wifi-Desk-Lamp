@@ -169,54 +169,18 @@ void sendCmd(const unsigned char cmd, const unsigned char length, const unsigned
 
 void printWebsite(WiFiClient &client)
 {
+
   client.println("<!DOCTYPE html>");
   client.println("<html lang=\"en\">");
   client.println("<head>");
   client.println("<meta charset=\"UTF-8\">");
   client.println("<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">");
   client.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-  client.println("<title>Document</title>");
-  client.println("<style>");
-  client.println("* {");
-  client.println("font-family: \"Helvetica Neue\", Helvetica, Arial;");
-  client.println("font-size: 72px;");
-  client.println("margin: 0;");
-  client.println("padding: 0;");
-  client.println("}");
-  client.println("body {");
-  client.println("overflow: hidden;");
-  client.println("}");
-  client.println("#color {");
-  client.println("position: absolute;");
-  client.println("width: 75vw;");
-  client.println("height: 50vh;");
-  client.println("right: 0;");
-  client.println("left: 50%;");
-  client.println("border: transparent;");
-  client.println("transform: translateX(-50%);");
-  client.println("}");
-  client.println("#submit {");
-  client.println("position: absolute;");
-  client.println("width: 50vw;");
-  client.println("height: 10vh;");
-  client.println("top: 82.5vh;");
-  client.println("left: 50%;");
-  client.println("transform: translateX(-50%);");
-  client.println("background-color: crimson;");
-  client.println("color: floralwhite;");
-  client.println("border: none;");
-  client.println("border-radius: 0.5rem;");
-  client.println("}");
-  client.println("#submit:hover {");
-  client.println("cursor: pointer;");
-  client.println("}");
-  client.println("</style>");
+  client.println("<title>Test 1234</title>");
   client.println("</head>");
-  client.println("<body>");
-  client.println("<form action=\"\" method=\"get\">");
-  client.println("<input type=\"color\" name=\"color\" id=\"color\">");
-  client.println("<input type=\"submit\" id=\"submit\" value=\"Submit\">");
-  client.println("</form>");
-  client.println("</body>");
+  client.println("<body><button id=\"btn\" onclick=\"sendRequest()\" style=\"width: 30rem; height: 5rem; background: indigo\">Test");
+  client.println("Code</button><br /><br /><br /><input type=\"text\" name=\"abc\" id=\"cmd\" /><br /><input type=\"text\" name=\"abc\"");
+  client.println("id=\"data\" /></body>");
+  client.println("<script>function sendRequest() { var xhr = new XMLHttpRequest(); var cmd = document.getElementById(\"cmd\").value; var data = document.getElementById(\"data\").value; xhr.open('POST', `/send-cmd?cmd=${cmd}&data=${data}`, true); xhr.send(); }</script>");
   client.println("</html>");
 }
